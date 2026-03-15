@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tədqiqat Çarxı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;900&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 30px 16px;
+    }
+
+    .wheel-app {
+      width: 100%;
+      max-width: 520px;
+      position: relative;
+    }
+
+    .title {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 4px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-shadow: 0 0 24px rgba(255,200,0,0.5);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .score-bar {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .score-item {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 8px 20px;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .score-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .score-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFD700;
+      font-family: 'Exo 2', sans-serif;
+    }
+
+    .game-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .wheel-container {
+      position: relative;
+      width: 340px;
+      height: 340px;
+      flex-shrink: 0;
+    }
+
+    .wheel-pointer {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 13px solid transparent;
+      border-right: 13px solid transparent;
+      border-top: 28px solid #FFD700;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+      z-index: 10;
+    }
+
+    #wheel-canvas {
+      border-radius: 50%;
+      box-shadow: 0 0 40px rgba(255,215,0,0.25), 0 0 80px rgba(100,100,255,0.15);
+    }
+
+    .spin-btn {
+      background: linear-gradient(135deg, #FFD700, #FF8C00);
+      color: #1a1a2e;
+      border: none;
+      padding: 15px 50px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: 'Exo 2', sans-serif;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 24px rgba(255,180,0,0.4);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+
+    .spin-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 28px rgba(255,180,0,0.55);
+    }
+
+    .spin-btn:active { transform: translateY(0); }
+
+    .spin-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result-panel {
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 18px;
+      padding: 22px;
+      display: none;
+    }
+
+    .result-panel.visible { display: block; }
+
+    .result-title {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFD700;
+      margin-bottom: 14px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .question-text {
+      font-size: 14px;
+      color: #fff;
+      line-height: 1.65;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .option-btn {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 11px 16px;
+      color: #fff;
+      font-size: 13px;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .option-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
+    .option-btn.correct { background: rgba(0,200,100,0.25); border-color: #00c864; color: #7bffba; }
+    .option-btn.wrong { background: rgba(220,50,50,0.25); border-color: #dc3232; color: #ffaaaa; }
+    .option-btn:disabled { cursor: default; }
+
+    .feedback {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 14px;
+      border-radius: 8px;
+      display: none;
+      margin-top: 6px;
+    }
+
+    .feedback.correct { display: block; background: rgba(0,200,100,0.15); color: #7bffba; }
+    .feedback.wrong { display: block; background: rgba(220,50,50,0.15); color: #ffaaaa; }
+
+    .special-card { text-align: center; padding: 12px 0; }
+    .special-icon { font-size: 48px; margin-bottom: 10px; }
+    .special-text { font-size: 15px; color: #fff; font-weight: 600; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div class="wheel-app">
+  <div class="title">Tədqiqat Çarxı</div>
+  <div class="subtitle">Çarxı fırlat, şansını sına!</div>
+
+  <div class="score-bar">
+    <div class="score-item">
+      <div class="score-label">Düzgün</div>
+      <div class="score-value" id="score-correct">0</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">Fırlanma</div>
+      <div class="score-value" id="score-spins">0</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">Xəta</div>
+      <div class="score-value" id="score-wrong">0</div>
+    </div>
+  </div>
+
+  <div class="game-area">
+    <div class="wheel-container">
+      <div class="wheel-pointer"></div>
+      <canvas id="wheel-canvas" width="340" height="340"></canvas>
+    </div>
+
+    <button class="spin-btn" id="spin-btn" onclick="spinWheel()">Fırla!</button>
+
+    <div class="result-panel" id="result-panel">
+      <div class="result-title" id="result-title"></div>
+      <div id="result-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const segments = [
+    { label: '1',       type: 'question', color: '#e74c3c' },
+    { label: '2',       type: 'question', color: '#e67e22' },
+    { label: '3',       type: 'question', color: '#f1c40f' },
+    { label: '4',       type: 'question', color: '#2ecc71' },
+    { label: '5',       type: 'question', color: '#1abc9c' },
+    { label: 'ŞANSLI',  type: 'lucky',    color: '#FFD700' },
+    { label: '6',       type: 'question', color: '#3498db' },
+    { label: '7',       type: 'question', color: '#9b59b6' },
+    { label: '8',       type: 'question', color: '#e74c3c' },
+    { label: 'ŞANSSIZ', type: 'unlucky',  color: '#c0392b' },
+    { label: '9',       type: 'question', color: '#16a085' },
+    { label: '10',      type: 'question', color: '#8e44ad' },
+    { label: 'TƏKRAR',  type: 'retry',    color: '#2980b9' },
+  ];
+
+  const questions = {
+    1: {
+      q: 'Birdən çox subyektin müqayisəli öyrənildiyi tədqiqat strategiyası necə adlanır?',
+      opts: ['A) Keys-stadi', 'B) Müqayisə xarakterli tədqiqat', 'C) Eksperimental tədqiqat'],
+      ans: 1
+    },
+    2: {
+      q: 'Aşağıdakılardan hansı müqayisə subyekti ola bilər?',
+      opts: ['A) Yalnız ölkələr', 'B) Yalnız fərdlər', 'C) Ölkələr, fərdlər və yaşayış məntəqələri'],
+      ans: 2
+    },
+    3: {
+      q: 'Qərb cəmiyyəti ilə Azərbaycanın boşanma səbəblərinin araşdırılması hansı müqayisəyə nümunədir?',
+      opts: ['A) Eyni məsələnin fərqli kontekstlərdə müqayisəsi', 'B) Eyni məsələnin müxtəlif zaman kəsimləri üzrə müqayisəsi', 'C) Xarici təcrübənin öyrənilməsi'],
+      ans: 0
+    },
+    4: {
+      q: 'Türkiyənin sosial müdafiə sisteminin Azərbaycanda tətbiqi imkanlarının öyrənilməsi nədir?',
+      opts: ['A) Nəzəriyyənin sınanması', 'B) Xarici təcrübənin öyrənilməsi', 'C) Metoddaxili yanaşma'],
+      ans: 1
+    },
+    5: {
+      q: 'Paytaxtda əməkhaqqının indiki və keçmiş dövrlər üzrə müqayisəsi hansı növə aiddir?',
+      opts: ['A) Metodlararası müqayisə', 'B) Müxtəlif zaman kəsimləri üzrə müqayisə', 'C) Fərqli subyektlərin müqayisəsi'],
+      ans: 1
+    },
+    6: {
+      q: 'Xarici ölkədə hazırlanmış nəzəriyyənin Azərbaycanda keçərli olub-olmadığını yoxlamaq nədir?',
+      opts: ['A) Nəzəriyyənin fərqli kontekstdə sınanması', 'B) Statistik məcmuların müqayisəsi', 'C) Kəmiyyət metodologiyasının tətbiqi'],
+      ans: 0
+    },
+    7: {
+      q: 'Müqayisəli tədqiqatdan öncə ölkələrin hansı məlumatları ilə tanış olmaq gərəkdir?',
+      opts: ['A) Yalnız coğrafi mövqeyi', 'B) Statistik məcmuları və hazırlanma üsulları', 'C) Siyasi liderlərin siyahısı'],
+      ans: 1
+    },
+    8: {
+      q: 'Cinayət məcəllələri arasındakı fərqlər nəyə təsir edə bilər?',
+      opts: ['A) Tədqiqatın büdcəsinə', 'B) Cinayətkarlığa dair statistikaya', 'C) Tədqiqatçının seçilməsinə'],
+      ans: 1
+    },
+    9: {
+      q: 'Praktikada müqayisə xarakterli tədqiqatdan ən çox hansı məqsədlə istifadə edilir?',
+      opts: ['A) Tarixi hadisələri dəyişmək üçün', 'B) Xarici təcrübənin öyrənilməsi üçün', 'C) Yalnız fərdlərin rəyini öyrənmək üçün'],
+      ans: 1
+    },
+    10: {
+      q: 'Müqayisəli tədqiqatda "kontekst" dedikdə nə nəzərdə tutulur?',
+      opts: ['A) Tədqiqatın aparıldığı mühit və ya şərait', 'B) İstifadə olunan anketin rəngi', 'C) Respondentlərin sayı'],
+      ans: 0
+    }
+  };
+
+  const canvas = document.getElementById('wheel-canvas');
+  const ctx = canvas.getContext('2d');
+  const N = segments.length;
+  const arc = (2 * Math.PI) / N;
+  let currentAngle = 0;
+  let spinning = false;
+  let scoreCorrect = 0, scoreWrong = 0, scoreSpins = 0;
+
+  function drawWheel(rotation) {
+    ctx.clearRect(0, 0, 340, 340);
+    const cx = 170, cy = 170, r = 158;
+
+    for (let i = 0; i < N; i++) {
+      const start = rotation + i * arc - Math.PI / 2;
+      const end = start + arc;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = segments[i].color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + arc / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      const lbl = segments[i].label;
+      if (lbl === 'ŞANSSIZ' || lbl === 'ŞANSLI' || lbl === 'TƏKRAR') {
+        ctx.font = 'bold 9px Exo 2, sans-serif';
+      } else {
+        ctx.font = 'bold 16px Exo 2, sans-serif';
+      }
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(lbl, r - 10, 5);
+      ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fill();
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 10px Exo 2, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GO', cx, cy);
+  }
+
+  drawWheel(0);
+
+  function getSegmentAtTop(rotation) {
+    let angle = ((rotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    let idx = Math.floor(((2 * Math.PI - angle + arc / 2) % (2 * Math.PI)) / arc) % N;
+    return idx;
+  }
+
+  function spinWheel() {
+    if (spinning) return;
+    spinning = true;
+    document.getElementById('spin-btn').disabled = true;
+    document.getElementById('result-panel').classList.remove('visible');
+
+    const extraSpins = 5 + Math.random() * 5;
+    const extraAngle = Math.random() * 2 * Math.PI;
+    const totalAngle = extraSpins * 2 * Math.PI + extraAngle;
+    const duration = 4200;
+    const start = performance.now();
+    const startAngle = currentAngle;
+
+    function ease(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function animate(now) {
+      const elapsed = now - start;
+      const t = Math.min(elapsed / duration, 1);
+      currentAngle = startAngle + totalAngle * ease(t);
+      drawWheel(currentAngle);
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        spinning = false;
+        scoreSpins++;
+        document.getElementById('score-spins').textContent = scoreSpins;
+        const idx = getSegmentAtTop(currentAngle);
+        showResult(segments[idx]);
+        document.getElementById('spin-btn').disabled = false;
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  function showResult(seg) {
+    const panel = document.getElementById('result-panel');
+    const title = document.getElementById('result-title');
+    const content = document.getElementById('result-content');
+    panel.classList.add('visible');
+
+    if (seg.type === 'question') {
+      const qNum = parseInt(seg.label);
+      const q = questions[qNum];
+      title.textContent = 'Sual ' + seg.label;
+      content.innerHTML = `
+        <div class="question-text">${q.q}</div>
+        <div class="options-list" id="opts-list">
+          ${q.opts.map((o, i) => `<button class="option-btn" onclick="checkAnswer(${i}, ${q.ans})">${o}</button>`).join('')}
+        </div>
+        <div class="feedback" id="feedback"></div>
+      `;
+    } else if (seg.type === 'lucky') {
+      title.textContent = 'Şanslı çıxdı!';
+      content.innerHTML = `<div class="special-card">
+        <div class="special-icon">⭐</div>
+        <div class="special-text">Təbrik edirik!<br>Bu fırlanma üçün +1 xal qazandın!</div>
+      </div>`;
+      scoreCorrect++;
+      document.getElementById('score-correct').textContent = scoreCorrect;
+    } else if (seg.type === 'unlucky') {
+      title.textContent = 'Şanssız çıxdı!';
+      content.innerHTML = `<div class="special-card">
+        <div class="special-icon">💀</div>
+        <div class="special-text">Bəxtsizlik!<br>Bu fırlanma üçün 1 xal itirildi.</div>
+      </div>`;
+      if (scoreCorrect > 0) {
+        scoreCorrect--;
+        document.getElementById('score-correct').textContent = scoreCorrect;
+      }
+    } else if (seg.type === 'retry') {
+      title.textContent = 'Təkrar Şans!';
+      content.innerHTML = `<div class="special-card">
+        <div class="special-icon">🔄</div>
+        <div class="special-text">Xoş gəldi!<br>Bir daha fırlat — bu dəfə sayılmır!</div>
+      </div>`;
+    }
+  }
+
+  function checkAnswer(chosen, correct) {
+    const btns = document.querySelectorAll('.option-btn');
+    btns.forEach(b => b.disabled = true);
+    btns[correct].classList.add('correct');
+    const fb = document.getElementById('feedback');
+    if (chosen === correct) {
+      btns[chosen].classList.add('correct');
+      fb.textContent = '✓ Doğru cavab! +1 xal qazandın!';
+      fb.className = 'feedback correct';
+      scoreCorrect++;
+      document.getElementById('score-correct').textContent = scoreCorrect;
+    } else {
+      btns[chosen].classList.add('wrong');
+      fb.textContent = '✗ Yanlış cavab. Doğru cavab işarələndi.';
+      fb.className = 'feedback wrong';
+      scoreWrong++;
+      document.getElementById('score-wrong').textContent = scoreWrong;
+    }
+  }
+</script>
+</body>
+</html>
