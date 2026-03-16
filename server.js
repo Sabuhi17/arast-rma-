@@ -1,3 +1,14 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+// Railway-ə yüklədiyiniz GEMINI_API_KEY dəyişənini sistemdən oxuyur
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// AI-dən cavab alma funksiyası
+async function getAIResponse(userPrompt) {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(userPrompt);
+  return result.response.text();
+}
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
@@ -9,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 const client = new Anthropic({
-  apiKey:process.env.ANTHROPIC_API_KEY,
+  apiKey:process.env.GEMINI_API_KEY,
 });
 
 app.get('/', (req, res) => {
