@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: process.xau_ruupgdYeFgkFPYmmzWMVqK2OjKf5b0pD3,
 });
 
 app.get('/', (req, res) => {
