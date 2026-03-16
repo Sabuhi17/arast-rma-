@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 const client = new Anthropic({
-  apiKey: process.env.XATA_API_KEY,
+  apiKey:process.env.XATA_API_KEY,
 });
 
 app.get('/', (req, res) => {
