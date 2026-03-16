@@ -1,5 +1,20 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+import express from "express";
+import cors from "cors";
 
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.post("/evaluate", async (req, res) => {
+   // AI kodun
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+   console.log("Server running on port " + PORT);
+});
 // Railway-ə yüklədiyiniz GEMINI_API_KEY dəyişənini sistemdən oxuyur
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
