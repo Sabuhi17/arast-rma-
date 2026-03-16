@@ -8,41 +8,80 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.get("/", (req, res) => {
-  res.json({ status: "Backend işləyir ✅" });
+  res.json({ status: "Sahə Tədqiqatçısı Backend işləyir ✅" });
 });
 
 app.post("/evaluate", async (req, res) => {
-  const { question, studentAnswer } = req.body;
+  const { question, refAnswer, studentAnswer, scenarioTitle } = req.body;
 
   if (!question || !studentAnswer) {
-    return res.status(400).json({ error: "Sual və cavab lazımdır" });
+    return res.status(400).json({
+      error: "Sual və tələbə cavabı lazımdır"
+    });
   }
 
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
-    });
+  const prompt = `
+Sən sosial tədqiqat metodları üzrə müəllimsən və tələbə cavabını qiymətləndirirsən.
 
-    const prompt = `
+SSENARI: ${scenarioTitle || ""}
 SUAL: ${question}
-TƏLƏBƏ CAVABI: ${studentAnswer}
+DÜZGÜN CAVABDA OLMALI OLAN FİKİRLƏR: ${refAnswer || ""}
+TƏLƏBƏNİN CAVABI: "${studentAnswer}"
 
-1-10 arası qiymətləndir və JSON qaytar:
-{"xal":<1-10>,"feedback":"qısa rəy"}
+1-10 arası qiymətləndir.
+
+QAYDALAR
+- Qrammatika səhvinə görə xal çıxma
+- Yalnız məzmunu qiymətləndir
+- Dost və qısa rəy yaz
+
+YALNIZ bu JSON formatında cavab ver:
+{"xal":<1-10>,"guclu":"<güclü tərəf>","eksik":"<çatışmayan>","tovsiye":"<tövsiyə>"}
 `;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+  try {
 
-    res.json({ ai: text });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash"
+    });
+
+    const result = await model.generateContent(prompt);
+
+    const response = await result.response;
+    const text = response.text();
+
+    const clean = text.replace(/```json|```/g, "").trim();
+
+    let parsed;
+
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      parsed = {
+        xal: 5,
+        guclu: "Cavab qismən mövzu ilə əlaqəlidir",
+        eksik: "AI JSON formatını poza bilər",
+        tovsiye: "Cavabı daha strukturlaşdırılmış yaz"
+      };
+    }
+
+    res.json(parsed);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "AI xətası" });
+
+    console.error("AI Xətası:", err);
+
+    res.status(500).json({
+      error: "AI qiymətləndirmə xətası",
+      details: err.message
+    });
+
   }
+
 });
 
 app.listen(PORT, () => {
