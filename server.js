@@ -39,35 +39,34 @@ VACIB QAYDALAR:
 - "bilmirəm", boş cavab, tamamilə kənar cavab = 1-2 xal
 - Feedback Azərbaycan dilində, qısa və dost tonda
 
-YALNIZ bu JSON formatında cavab ver, başqa heç nə yazma, heç bir izah əlavə etmə:
+YALNIZ bu JSON formatında cavab ver, başqa heç nə yazma:
 {"xal":<1-10 tam ədəd>,"guclu":"<güclü tərəf, 1 cümlə>","eksik":"<çatışmayan, 1 cümlə və ya boş string>","توصیه":"<tövsiyə, 1 cümlə>"}`;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY tapılmadı');
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY tapılmadı');
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 400,
-          },
-        }),
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 400,
+      })
+    });
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error('Gemini xətası: ' + errText);
+      throw new Error('Groq xətası: ' + errText);
     }
 
     const data = await response.json();
-    const raw = data.candidates[0].content.parts[0].text
+    const raw = data.choices[0].message.content
       .replace(/```json|```/g, '')
       .trim();
 
@@ -78,11 +77,12 @@ YALNIZ bu JSON formatında cavab ver, başqa heç nə yazma, heç bir izah əlav
     }
 
     res.json(result);
+
   } catch (err) {
     console.error('Xəta:', err.message);
     res.status(500).json({
       error: 'Qiymətləndirmə xətası',
-      details: err.message,
+      details: err.message
     });
   }
 });
