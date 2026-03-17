@@ -1,6 +1,5 @@
-const express = require("express");
-const cors = require("cors");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const express = require('express');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,82 +7,86 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-app.get("/", (req, res) => {
-  res.json({ status: "Sahə Tədqiqatçısı Backend işləyir ✅" });
+app.get('/', (req, res) => {
+  res.json({ status: 'Sahə Tədqiqatçısı Backend işləyir ✅' });
 });
 
-app.post("/evaluate", async (req, res) => {
+app.post('/evaluate', async (req, res) => {
   const { question, refAnswer, studentAnswer, scenarioTitle } = req.body;
 
   if (!question || !studentAnswer) {
-    return res.status(400).json({
-      error: "Sual və tələbə cavabı lazımdır"
-    });
+    return res.status(400).json({ error: 'Sual və cavab tələb olunur' });
   }
 
-  const prompt = `
-Sən sosial tədqiqat metodları üzrə müəllimsən və tələbə cavabını qiymətləndirirsən.
+  const prompt = `Sən sosial tədqiqat metodları üzrə müəllimsən. Azərbaycan universitetinin 3-cü kurs tələbəsinin cavabını qiymətləndirirsən.
 
-SSENARI: ${scenarioTitle || ""}
+SSENARI: ${scenarioTitle || ''}
 SUAL: ${question}
-DÜZGÜN CAVABDA OLMALI OLAN FİKİRLƏR: ${refAnswer || ""}
+DÜZGÜN CAVABDA OLMALI OLAN FİKİRLƏR: ${refAnswer || ''}
 TƏLƏBƏNİN CAVABI: "${studentAnswer}"
 
-1-10 arası qiymətləndir.
+QİYMƏTLƏNDİRMƏ (1-10 xal):
+- 1-2: Boş, mövzudan kənar, "bilmirəm" tipli cavab
+- 3-4: Çox az məlumat, əsas fikirlər yoxdur
+- 5-6: Bəzi düzgün fikirlər var amma natamamdır
+- 7-8: Əsas fikirlər var, yaxşı izah edilib
+- 9-10: Demək olar tam, dərin anlayış göstərilir
 
-QAYDALAR
-- Qrammatika səhvinə görə xal çıxma
-- Yalnız məzmunu qiymətləndir
-- Dost və qısa rəy yaz
+VACIB QAYDALAR:
+- Qrammatika, yazı səhvi, dialekt üçün XAL ÇIXMA
+- Yalnız məzmuna, anlayışlara, məntiqi düşüncəyə bax
+- Fikir düzgündürsə amma zəif ifadə olunubsa — fikrə görə xal ver
+- "bilmirəm", boş cavab, tamamilə kənar cavab = 1-2 xal
+- Feedback Azərbaycan dilində, qısa və dost tonda
 
-YALNIZ bu JSON formatında cavab ver:
-{"xal":<1-10>,"guclu":"<güclü tərəf>","eksik":"<çatışmayan>","tovsiye":"<tövsiyə>"}
-`;
+YALNIZ bu JSON formatında cavab ver, başqa heç nə yazma, heç bir izah əlavə etmə:
+{"xal":<1-10 tam ədəd>,"guclu":"<güclü tərəf, 1 cümlə>","eksik":"<çatışmayan, 1 cümlə və ya boş string>","توصیه":"<tövsiyə, 1 cümlə>"}`;
 
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY tapılmadı');
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash"
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 400,
+          },
+        }),
+      }
+    );
 
-    const result = await model.generateContent(prompt);
-
-    const response = await result.response;
-    const text = response.text();
-
-    const clean = text.replace(/```json|```/g, "").trim();
-
-    let parsed;
-
-    try {
-      parsed = JSON.parse(clean);
-    } catch {
-      parsed = {
-        xal: 5,
-        guclu: "Cavab qismən mövzu ilə əlaqəlidir",
-        eksik: "AI JSON formatını poza bilər",
-        tovsiye: "Cavabı daha strukturlaşdırılmış yaz"
-      };
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('Gemini xətası: ' + errText);
     }
 
-    res.json(parsed);
+    const data = await response.json();
+    const raw = data.candidates[0].content.parts[0].text
+      .replace(/```json|```/g, '')
+      .trim();
 
+    const result = JSON.parse(raw);
+
+    if (typeof result.xal !== 'number' || result.xal < 1 || result.xal > 10) {
+      throw new Error('Yanlış xal formatı');
+    }
+
+    res.json(result);
   } catch (err) {
-
-    console.error("AI Xətası:", err);
-
+    console.error('Xəta:', err.message);
     res.status(500).json({
-      error: "AI qiymətləndirmə xətası",
-      details: err.message
+      error: 'Qiymətləndirmə xətası',
+      details: err.message,
     });
-
   }
-
 });
 
 app.listen(PORT, () => {
-  console.log("Server işləyir port:", PORT);
+  console.log(`Server ${PORT} portunda işləyir`);
 });
